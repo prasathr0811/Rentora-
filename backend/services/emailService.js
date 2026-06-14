@@ -91,6 +91,102 @@ const getTransporter = async () => {
 };
 
 /**
+ * Helper to send email - checks for HTTP-based APIs (to bypass Render SMTP block) or falls back to SMTP
+ */
+const sendEmailHelper = async ({ to, subject, text, html, attachments }) => {
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@rentora.com';
+
+  if (brevoApiKey) {
+    console.log('📧 Email: Sending via Brevo HTTP API (bypassing Render port block) ✅');
+    try {
+      const payload = {
+        sender: { name: 'Rentora', email: fromAddress },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: html || text,
+      };
+
+      if (text && !html) {
+        payload.textContent = text;
+      }
+
+      if (attachments && attachments.length > 0) {
+        payload.attachment = attachments.map(att => {
+          let base64Content = '';
+          if (att.path) {
+            base64Content = fs.readFileSync(att.path).toString('base64');
+          } else if (att.content) {
+            base64Content = typeof att.content === 'string'
+              ? Buffer.from(att.content).toString('base64')
+              : att.content.toString('base64');
+          }
+          return {
+            name: att.filename,
+            content: base64Content
+          };
+        });
+      }
+
+      // Use native global fetch (Node 18+)
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': brevoApiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Brevo API returned status ${response.status}: ${errText}`);
+      }
+
+      const data = await response.json();
+      console.log(`✅ Email sent via Brevo HTTP API (Message ID: ${data.messageId || 'N/A'})`);
+      return;
+    } catch (err) {
+      console.error('❌ Failed to send email via Brevo HTTP API:', err.message);
+      console.log('🔄 Attempting fallback to standard SMTP...');
+    }
+  }
+
+  // Fallback to Nodemailer SMTP/Ethereal
+  const { transporter, type: tType } = await getTransporter();
+
+  if (!transporter) {
+    console.log('❌ No email transporter available. Skipping email.');
+    return;
+  }
+
+  const mailOptions = {
+    from: `"Rentora" <${fromAddress}>`,
+    to,
+    subject,
+    text,
+    html,
+  };
+
+  if (attachments && attachments.length > 0) {
+    mailOptions.attachments = attachments;
+  }
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent to ${to} (Message ID: ${info.messageId})`);
+    if (tType === 'ethereal') {
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      console.log(`🔗 Preview email: ${previewUrl}`);
+    }
+  } catch (err) {
+    console.error('❌ Failed to send email via SMTP:', err.message);
+    throw err;
+  }
+};
+
+/**
  * Sends order/rental receipt email to user
  * @param {Object} item - Order or Rental document (populated with user and product)
  * @param {String} type - 'buy' or 'rent'
@@ -200,43 +296,20 @@ const sendReceiptEmail = async (item, type, pdfPath) => {
     </html>
   `;
 
-  const { transporter, type: tType } = await getTransporter();
-
-  if (!transporter) {
-    console.log('❌ No email transporter available. Skipping email.');
-    return;
+  const attachments = [];
+  if (pdfPath && fs.existsSync(pdfPath)) {
+    attachments.push({
+      filename: `Rentora_Receipt_${transId.substring(0, 8)}.pdf`,
+      path: pdfPath,
+    });
   }
 
-  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@rentora.com';
-
-  const mailOptions = {
-    from: `"Rentora" <${fromAddress}>`,
+  await sendEmailHelper({
     to: userEmail,
     subject: `Rentora – Payment Confirmed: ${productName}`,
     html: htmlContent,
-  };
-
-  if (pdfPath && fs.existsSync(pdfPath)) {
-    mailOptions.attachments = [
-      {
-        filename: `Rentora_Receipt_${transId.substring(0, 8)}.pdf`,
-        path: pdfPath,
-      },
-    ];
-  }
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${userEmail} (Message ID: ${info.messageId})`);
-
-    // If using Ethereal, log the preview URL so you can view the email in browser
-    if (tType === 'ethereal') {
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      console.log(`🔗 Preview email: ${previewUrl}`);
-    }
-  } catch (err) {
-    console.error('❌ Failed to send email:', err.message);
-  }
+    attachments,
+  });
 };
 
 /**
@@ -318,7 +391,6 @@ const sendCancellationEmail = async (item, type) => {
             <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937; text-align: right;">${productName}</td>
           </tr>
           <tr>
-            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #4b5563;"><strong>Transaction ID:</strong></td>
             <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937; text-align: right; font-family: monospace;">${transId}</td>
           </tr>
           <tr>
@@ -341,32 +413,11 @@ const sendCancellationEmail = async (item, type) => {
     </html>
   `;
 
-  const { transporter, type: tType } = await getTransporter();
-
-  if (!transporter) {
-    console.log('❌ No email transporter available. Skipping cancellation email.');
-    return;
-  }
-
-  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@rentora.com';
-
-  const mailOptions = {
-    from: `"Rentora" <${fromAddress}>`,
+  await sendEmailHelper({
     to: userEmail,
     subject: `Rentora – Transaction Cancelled: ${productName}`,
     html: htmlContent,
-  };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Cancellation email sent to ${userEmail} (Message ID: ${info.messageId})`);
-    if (tType === 'ethereal') {
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      console.log(`🔗 Preview email: ${previewUrl}`);
-    }
-  } catch (err) {
-    console.error('❌ Failed to send cancellation email:', err.message);
-  }
+  });
 };
 
 /**
@@ -374,34 +425,12 @@ const sendCancellationEmail = async (item, type) => {
  * @param {Object} options - Email options (to, subject, text, html)
  */
 const sendMail = async (options) => {
-  const { transporter, type: tType } = await getTransporter();
-
-  if (!transporter) {
-    console.log('❌ No email transporter available. Skipping generic email.');
-    return;
-  }
-
-  const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@rentora.com';
-
-  const mailOptions = {
-    from: `"Rentora" <${fromAddress}>`,
+  await sendEmailHelper({
     to: options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
-  };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${options.to} (Message ID: ${info.messageId})`);
-    if (tType === 'ethereal') {
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      console.log(`🔗 Preview email: ${previewUrl}`);
-    }
-  } catch (err) {
-    console.error('❌ Failed to send email:', err.message);
-    throw err;
-  }
+  });
 };
 
 module.exports = { sendReceiptEmail, sendCancellationEmail, sendMail };
