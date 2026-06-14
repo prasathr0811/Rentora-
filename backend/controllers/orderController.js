@@ -59,13 +59,15 @@ const createOrder = async (req, res, next) => {
       .populate('user', 'name email')
       .populate('product', 'name category buyPrice');
 
-    // Generate PDF receipt and trigger email
-    try {
-      const pdfPath = await generateReceiptPDF(populatedOrder, 'buy');
-      await sendReceiptEmail(populatedOrder, 'buy', pdfPath);
-    } catch (pdfErr) {
-      console.error('Failed to generate PDF receipt or send email:', pdfErr.message);
-    }
+    // Generate PDF receipt and send email in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        const pdfPath = await generateReceiptPDF(populatedOrder, 'buy');
+        await sendReceiptEmail(populatedOrder, 'buy', pdfPath);
+      } catch (pdfErr) {
+        console.error('Failed to generate PDF receipt or send email:', pdfErr.message);
+      }
+    });
 
     res.status(201).json({
       success: true,
