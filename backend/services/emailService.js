@@ -94,9 +94,72 @@ const getTransporter = async () => {
  * Helper to send email - checks for HTTP-based APIs (to bypass Render SMTP block) or falls back to SMTP
  */
 const sendEmailHelper = async ({ to, subject, text, html, attachments }) => {
+  const gmailScriptUrl = process.env.GMAIL_SCRIPT_URL;
   const brevoApiKey = process.env.BREVO_API_KEY;
   const fromAddress = process.env.EMAIL_FROM || process.env.EMAIL_USER || 'no-reply@rentora.com';
 
+  // Priority 1: Google Apps Script Web App (Sends using real Gmail account, over HTTP 443 - not blocked by Render!)
+  if (gmailScriptUrl) {
+    console.log('📧 Email: Sending via Gmail Apps Script Web App (bypassing Render port block) ✅');
+    try {
+      const payload = {
+        to,
+        subject,
+        html: html || text,
+        text: text,
+      };
+
+      if (attachments && attachments.length > 0) {
+        payload.attachments = attachments.map(att => {
+          let base64Content = '';
+          if (att.path) {
+            base64Content = fs.readFileSync(att.path).toString('base64');
+          } else if (att.content) {
+            base64Content = typeof att.content === 'string'
+              ? Buffer.from(att.content).toString('base64')
+              : att.content.toString('base64');
+          }
+          return {
+            name: att.filename,
+            content: base64Content
+          };
+        });
+      }
+
+      const response = await fetch(gmailScriptUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const resText = await response.text();
+      let resJson;
+      try {
+        resJson = JSON.parse(resText);
+      } catch (e) {
+        // If it returns successful HTML/redirect response
+        if (response.status >= 200 && response.status < 300) {
+          console.log('✅ Email sent via Gmail Apps Script!');
+          return;
+        }
+        throw new Error(`Google Apps Script returned status ${response.status}: ${resText}`);
+      }
+
+      if (resJson && resJson.success) {
+        console.log('✅ Email sent via Gmail Apps Script successfully!');
+        return;
+      } else {
+        throw new Error(resJson ? resJson.error : 'Unknown error');
+      }
+    } catch (err) {
+      console.error('❌ Failed to send email via Gmail Apps Script:', err.message);
+      console.log('🔄 Attempting fallback...');
+    }
+  }
+
+  // Priority 2: Brevo HTTP API
   if (brevoApiKey) {
     console.log('📧 Email: Sending via Brevo HTTP API (bypassing Render port block) ✅');
     try {
