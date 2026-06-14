@@ -107,6 +107,7 @@ const sendEmailHelper = async ({ to, subject, text, html, attachments }) => {
         subject,
         html: html || text,
         text: text,
+        senderName: 'Rentora',
       };
 
       if (attachments && attachments.length > 0) {
