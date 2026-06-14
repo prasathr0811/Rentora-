@@ -4,7 +4,6 @@
 [![Node](https://img.shields.io/badge/Backend-Node.js-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB-darkgreen?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
 [![Tailwind](https://img.shields.io/badge/Styling-Tailwind_CSS-cyan?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-ISC-orange?style=for-the-badge&logo=open-source-initiative)](https://opensource.org/licenses/ISC)
 
 Rentora is a premium, full-stack **MERN (MongoDB, Express, React, Node.js)** web application that merges e-commerce purchasing and daily rental leasing within a single unified platform. Designed with sleek aesthetics, fluid state transitions, and a clean database design, Rentora provides users the option to either purchase products outright or rent them on daily budgets with automatic refundable security deposit calculations.
 
