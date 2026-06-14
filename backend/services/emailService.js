@@ -4,20 +4,42 @@ const path = require('path');
 
 // Cached transporter (reuse across requests)
 let cachedTransporter = null;
-let transporterType = null; // 'gmail', 'smtp', 'ethereal'
+let transporterType = null; // 'gmail-oauth2', 'gmail', 'smtp', 'ethereal'
 
 /**
- * Create SMTP transporter from .env config or auto-create Ethereal test account
+ * Create SMTP transporter - supports Gmail OAuth2, SMTP, or Ethereal fallback
  */
 const getTransporter = async () => {
   if (cachedTransporter) return { transporter: cachedTransporter, type: transporterType };
+
+  const clientId = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+  const gmailUser = process.env.GMAIL_USER || process.env.EMAIL_USER;
 
   const host = process.env.EMAIL_HOST;
   const port = process.env.EMAIL_PORT;
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
 
-  // Check if real credentials are configured (not placeholders)
+  // Priority 1: Gmail OAuth2 (works from cloud servers like Render!)
+  if (clientId && clientSecret && refreshToken && gmailUser) {
+    cachedTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: gmailUser,
+        clientId,
+        clientSecret,
+        refreshToken,
+      },
+    });
+    transporterType = 'gmail-oauth2';
+    console.log('📧 Email: Using Gmail OAuth2 ✅');
+    return { transporter: cachedTransporter, type: transporterType };
+  }
+
+  // Priority 2: Regular SMTP (Gmail App Password or Brevo etc.)
   const isConfigured =
     host && port && user && pass &&
     !user.includes('your_') &&
@@ -26,7 +48,6 @@ const getTransporter = async () => {
     pass.trim() !== '';
 
   if (isConfigured) {
-    // Gmail setup
     if (host.includes('gmail')) {
       cachedTransporter = nodemailer.createTransport({
         service: 'gmail',
@@ -45,7 +66,7 @@ const getTransporter = async () => {
       console.log(`📧 Email: Using SMTP (${host})`);
     }
   } else {
-    // Auto-create Ethereal test account (works without any config!)
+    // Fallback: Auto-create Ethereal test account
     try {
       const testAccount = await nodemailer.createTestAccount();
       cachedTransporter = nodemailer.createTransport({
