@@ -1,12 +1,20 @@
 # 🛒 Rentora – Unified Buy & Rental Marketplace
 
+[![Live Demo](https://img.shields.io/badge/Demo-Live_on_Vercel-success?style=for-the-badge&logo=vercel&logoColor=white&color=000000)](https://rentora-beta.vercel.app/)
 [![React](https://img.shields.io/badge/Frontend-React.js-blue?style=for-the-badge&logo=react)](https://react.dev/)
 [![Node](https://img.shields.io/badge/Backend-Node.js-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB-darkgreen?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
 [![Tailwind](https://img.shields.io/badge/Styling-Tailwind_CSS-cyan?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-ISC-orange?style=for-the-badge&logo=open-source-initiative)](https://opensource.org/licenses/ISC)
 
 Rentora is a premium, full-stack **MERN (MongoDB, Express, React, Node.js)** web application that merges e-commerce purchasing and daily rental leasing within a single unified platform. Designed with sleek aesthetics, fluid state transitions, and a clean database design, Rentora provides users the option to either purchase products outright or rent them on daily budgets with automatic refundable security deposit calculations.
+
+---
+
+## 🔗 Live Deployment & Code Links
+
+* **Live Frontend Client**: [https://rentora-beta.vercel.app/](https://rentora-beta.vercel.app/)
+* **GitHub Repository**: [https://github.com/prasathr0811/Rentora-](https://github.com/prasathr0811/Rentora-)
+* **Clone via SSH**: `git@github.com:prasathr0811/Rentora-.git`
 
 ---
 
@@ -35,7 +43,7 @@ graph TD
 * Uses `pdfkit` on the backend to dynamically generate stylized, branded PDF receipts containing transaction IDs, date timestamps, security deposits, and customized lease schedules.
 * Receipts are stored temporarily and served via a protected route that supports instant browser viewing and printing.
 
-### 🔄 3. Multi-Phase simulated Payment Gateway
+### 🔄 3. Multi-Phase Simulated Payment Gateway
 * Integrates a realistic checkout pipeline that performs validation, cart aggregation (handling mixed purchases/rentals), and triggers a 3-second multi-phase payment authorization visual loading indicator on the client before committing records to the database.
 
 ---
