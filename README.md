@@ -32,7 +32,7 @@ graph TD
 
 ---
 
-## 💡 Engineering Spotlights (Recruiter Interest)
+## 💡 Engineering Spotlights 
 
 ### ⚡ 1. Google Apps Script HTTPS Email Dispatcher
 * **Problem**: Cloud hosting services (such as Render on the Free Tier) block standard SMTP outbound traffic (ports 25, 465, 587) to prevent spam. Direct Gmail/Brevo SMTP connections will time out in production.
@@ -149,15 +149,4 @@ Rentora/
    ```
    *Frontend Client runs on [http://localhost:5173](http://localhost:5173).*
 
----
 
-## 🔑 Demo Credentials
-
-To test the application immediately, you can log in with these pre-seeded accounts:
-
-* **Regular Buyer/Renter Account**:
-  * **Email**: `demo@rentora.com`
-  * **Password**: `123456`
-* **Administrative Account**:
-  * **Email**: `admin@rentora.com`
-  * **Password**: `adminpassword`
