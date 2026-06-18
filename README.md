@@ -10,11 +10,9 @@ Rentora is a premium, full-stack **MERN (MongoDB, Express, React, Node.js)** web
 
 ---
 
-## 🔗 Live Deployment & Code Links
+## 🔗 Live Deployment
 
 * **Live Frontend Client**: [https://rentora-beta.vercel.app/](https://rentora-beta.vercel.app/)
-* **GitHub Repository**: [https://github.com/prasathr0811/Rentora-](https://github.com/prasathr0811/Rentora-)
-* **Clone via SSH**: `git@github.com:prasathr0811/Rentora-.git`
 
 ---
 
